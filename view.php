@@ -7,7 +7,7 @@ if($usedSelector) {
     if($resultCount === 0) {
         echo __("No pages found.");
     } else {
-        sprintf(__("%d pages found."), $resultCount);
+        printf(__("%d page(s) found."), $resultCount);
     
         echo $pager;
         
