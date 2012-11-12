@@ -1,18 +1,29 @@
+<script>
+    $(function() {
+        SelectorTest = {};
+        SelectorTest.pageData = <?php echo $initialData; ?>;
+        
+        $('.selectortest-tree')
+        .each(function() {
+            $(this).tree('loadData', [SelectorTest.pageData[$(this).attr('data-id')]]);
+        });
+    });
+</script>
+
 <?php
 echo $inputForm;
 
 if($usedSelector) {
-    echo "<p>Used selector: <b>$usedSelector</b></p>";
     
-    if($resultCount === 0) {
-        echo __("No pages found.");
-    } else {
-        printf(__("%d page(s) found."), $resultCount);
+    printf(_n('%d page found with selector', '%d pages found with selector', $resultCount), $resultCount);
+
+    echo '<span class="selectortest-used-selector">';
+    echo '"' . $usedSelector . '"';
+    echo '</span>';
     
-        echo $pager;
-        
+    if($resultCount > 0) {
+        echo $pager;        
         echo $resultTable;
-        
         echo $pager;
     }
 }
