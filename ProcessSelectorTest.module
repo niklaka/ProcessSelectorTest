@@ -316,6 +316,8 @@ class ProcessSelectorTest extends Process {
 	/**
 	 * Format all field values for display. Handles language-alternate and multi-language fields.
 	 *
+	 * TODO: wrap fields inside a fieldset to their own subtree
+	 *
 	 * @param Page $page Page object
 	 * @return array Array of displayable data
 	 *
@@ -551,6 +553,8 @@ class ProcessSelectorTest extends Process {
 	/**
 	 *	Get data for a given template
 	 *
+	 *	TODO: cache result (there are often many pages with the same template)
+	 *
 	 *	@param Template $tpl
 	 *	@return array Array of data for the template
 	 *
@@ -560,12 +564,12 @@ class ProcessSelectorTest extends Process {
 		if($tpl->id) {
 			$fieldCount = count($tpl->fields);
 			$data = array(
-				array('key' => 'id',          'value' => $tpl->id),
-				array('key' => 'numPages',    'value' => $tpl->getNumPages()),
-				array('key' => 'urlSegments', 'value' => $tpl->urlSegments),
-				array('key' => 'noChildren',  'value' => $tpl->noChildren),
-				array('key' => 'noParents',   'value' => $tpl->noParents),
-				array('key' => 'altFilename', 'value' => $tpl->altFilename)
+				array('key' => 'id',         'value' => $tpl->id),
+				array('key' => 'numPages',   'value' => $tpl->getNumPages()),
+				// TODO: to string
+				array('key' => 'flags',      'value' => $tpl->flags),
+				array('key' => 'cache_time', 'value' => $tpl->cache_time),
+				$this->arrayToTreeNode('data', $tpl->getArray())
 			);
 			$fieldsNode = array('key' => 'fields', 'value' => $fieldCount);
 			if($fieldCount) {
@@ -595,7 +599,8 @@ class ProcessSelectorTest extends Process {
 			array('key' => 'label',    'value' => $field->label),
 			array('key' => 'type',     'value' => "{$field->type}"),
 			array('key' => 'required', 'value' => $field->required),
-			array('key' => 'flags',    'value' => $this->flagsToString($field->flags, $this->getFieldFlagMap()))
+			array('key' => 'flags',    'value' => $this->flagsToString($field->flags, $this->getFieldFlagMap())),
+			$this->arrayToTreeNode('data', $field->getArray())
 		);
 
 		// show fields inside repeater fields as well
@@ -615,6 +620,35 @@ class ProcessSelectorTest extends Process {
 		}
 
 		return $data;
+	}
+
+	/**
+	 * Formats associative array for display with jqTree
+	 *
+	 * @param string $label Node label
+	 * @param array $data Associative array to format
+	 * @return array Node with given data
+	 *
+	 */
+	private function arrayToTreeNode($label, $data) {
+		$tree = array();
+		ksort($data);
+		foreach($data as $key => $value) {
+			$tree[] = array(
+				'key'   => $key,
+				'value' => $value
+			);
+		}
+
+		// constuct the node based on the count on keys in data array
+		// the same amount of items will be in the tree array
+		$ret = array(
+			'key' => $label,
+			'value' => sprintf($this->_n('[%d key]', '[%d keys]', count($tree)), count($tree))
+		);
+		if(count($tree)) $ret['children'] = $tree;
+
+		return $ret;
 	}
 
 	/**
