@@ -551,23 +551,26 @@ class ProcessSelectorTest extends Process {
 	}
 
 	/**
-	 *	Get data for a given template
-	 *
-	 *	TODO: cache result (there are often many pages with the same template)
+	 *	Get data for a given template.
+	 *	Formed data is cached to boost things up as it's not that uncommon to hit several pages with the same template.
 	 *
 	 *	@param Template $tpl
 	 *	@return array Array of data for the template
 	 *
 	 */
 	private function getTemplateProperties($tpl) {
+		static $cache = array();
+		
 		$data = array();
 		if($tpl->id) {
+			// was data for this template already formed? if so, use it!
+			if(array_key_exists($tpl->id, $cache)) return $cache[$tpl->id];
+			
 			$fieldCount = count($tpl->fields);
 			$data = array(
 				array('key' => 'id',         'value' => $tpl->id),
 				array('key' => 'numPages',   'value' => $tpl->getNumPages()),
-				// TODO: to string
-				array('key' => 'flags',      'value' => $tpl->flags),
+				array('key' => 'flags',      'value' => $this->flagsToString($tpl->flags, $this->getTemplateFlagMap())),
 				array('key' => 'cache_time', 'value' => $tpl->cache_time),
 				$this->arrayToTreeNode('data', $tpl->getArray())
 			);
@@ -583,6 +586,9 @@ class ProcessSelectorTest extends Process {
 				}
 			}
 			$data[] = $fieldsNode;
+			
+			// cache the result
+			$cache[$tpl->id] = $data;
 		}
 		return $data;
 	}
@@ -703,6 +709,18 @@ class ProcessSelectorTest extends Process {
 			Page::statusHidden      => 'hidden',
 			Page::statusUnpublished => 'unpublished',
 			Page::statusTrash       => 'trash'
+		);
+	}
+
+	/**
+	 * Returns a mapping from template flag values to string representations
+	 *
+	 * @return array
+	 *
+	 */
+	private function getTemplateFlagMap() {
+		return array(
+			Template::flagSystem => 'system'
 		);
 	}
 
