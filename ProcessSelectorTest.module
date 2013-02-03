@@ -323,7 +323,8 @@ class ProcessSelectorTest extends Process {
 	 *
 	 */
 	private function getPageFieldValues($page) {
-		$data = array();
+		// each array in data array represents a 'level' of fields (root / fieldsets)
+		$data = array(array());
 		// ensure output formatting is off (we want values as is and getting multilang values requires this)
 		$page->setOutputFormatting(false);
 		foreach($page->fields as $f) {
@@ -379,10 +380,28 @@ class ProcessSelectorTest extends Process {
 			// default: format the value here if this wasn't a multilang case of some sort
 			if(!$item) $item = $this->getPageFieldValue($f, $f->name, $page->$f);
 
-			$data[] = $item;
+			// end subtree if this was a FieldsetClose
+			if(preg_match('/FieldtypeFieldsetClose/', $f->type)) {
+				$children = array_pop($data);
+
+				// pop the opening item, adjust children and value and let the $item to be added again
+				$item = array_pop($data[count($data)-1]);
+				$item['children'] = $children;
+				$item['value'] = count($children);
+			}
+
+			// add the item to the tree
+			$data[count($data)-1][] = $item;
+
+			// create a new subtree if this was a FieldsetOpen of some sort
+			if(preg_match('/FieldtypeFieldset(Tab)?Open/', $f->type)) {
+				array_push($data, array());
+			}
 		}
 
-		return $data;
+		// first item is the 'root level'
+		// NOTE: if the template data is broken, this will be too (fieldset open/close pairs not matching)
+		return $data[0];
 	}
 
 	/*
@@ -560,12 +579,12 @@ class ProcessSelectorTest extends Process {
 	 */
 	private function getTemplateProperties($tpl) {
 		static $cache = array();
-		
+
 		$data = array();
 		if($tpl->id) {
 			// was data for this template already formed? if so, use it!
 			if(array_key_exists($tpl->id, $cache)) return $cache[$tpl->id];
-			
+
 			$fieldCount = count($tpl->fields);
 			$data = array(
 				array('key' => 'id',         'value' => $tpl->id),
@@ -586,7 +605,7 @@ class ProcessSelectorTest extends Process {
 				}
 			}
 			$data[] = $fieldsNode;
-			
+
 			// cache the result
 			$cache[$tpl->id] = $data;
 		}
