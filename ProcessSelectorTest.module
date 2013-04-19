@@ -147,7 +147,8 @@ class ProcessSelectorTest extends Process {
 
 			// try to fetch results (exceptions are welcome and catched below)
 			$results = wire('pages')->find($selector);
-			$this->view->usedSelector = $selector;
+			// run selector through satinizer for viewing purposes
+			$this->view->usedSelector = wire('sanitizer')->entities($selector);
 
 			// generate the results table
 			$cnt = $results->getTotal();
