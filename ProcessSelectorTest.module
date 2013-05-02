@@ -484,7 +484,14 @@ class ProcessSelectorTest extends Process {
 				break;
 			case 'FieldtypePage':
 				$n = 0;
-				foreach($value as $p) $children[] = $this->getPageLoader($p, (string)$n++);
+				// single page field value may be boolean false of NullPage (id=0) when no page is selected
+				if($value && $value instanceof Page && $value->id) {
+					$children[] = $this->getPageLoader($value, (string)$n++);
+				} else if($value instanceof PageArray) {
+					foreach($value as $p) {
+						$children[] = $this->getPageLoader($p, (string)$n++);
+					}
+				}
 				$item['value'] = count($children);
 				break;
 			case 'FieldtypeRepeater':
