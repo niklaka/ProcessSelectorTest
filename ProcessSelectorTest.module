@@ -43,7 +43,7 @@ class ProcessSelectorTest extends Process {
 		return array(
 			'title'   => 'Selector test',
 			'summary' => 'Test selectors and explore page data and properties without editing a template file',
-			'version' => 111,
+			'version' => 112,
 			'author'  => 'Niklas Lakanen'
 		);
 	}
