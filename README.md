@@ -11,11 +11,21 @@ selectors without editing a template file or a bootstrapped script.
   * Repeater fields and values
   * Images and their variations on disk
   * More data is loaded on-demand as the tree is traversed deeper
+* See page permissions for the chosen role
 * Quick links to edit/view pages, edit templates and run new selectors (select pages with the same template or children of a page)
 * Page statuses visualized like in default admin theme
 * Add pagination
 
 ## Changelog
+
+**1.13 / 2013-09-20**
+
+* Fixed: multi-lingual titles are now displayed correctly and page name is used as a fallback in case of empty/undefined title.
+* Added: page permissions are shown for the chosen role
+
+**1.12 / 2013-05-02**
+
+* Fixed: Single page fields are now handled correctly.
 
 **1.11 / 2013-02-07**
 

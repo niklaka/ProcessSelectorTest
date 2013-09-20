@@ -20,6 +20,11 @@ if($usedSelector) {
 	echo '<span class="selectortest-used-selector">';
 	echo '"' . $usedSelector . '"';
 	echo '</span>';
+	echo '</br>';
+
+	if($fakeRole) {
+		printf(_('Page permissions for role %s'), $fakeRole);
+	}
 
 	if($resultCount > 0) {
 		echo $pager;

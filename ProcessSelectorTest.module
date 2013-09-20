@@ -43,7 +43,7 @@ class ProcessSelectorTest extends Process {
 		return array(
 			'title'   => 'Selector test',
 			'summary' => 'Test selectors and explore page data and properties without editing a template file',
-			'version' => 111,
+			'version' => 113,
 			'author'  => 'Niklas Lakanen'
 		);
 	}
@@ -66,6 +66,7 @@ class ProcessSelectorTest extends Process {
 		// init some vars (so that view may print them out as is)
 		$this->view->usedSelector = '';
 		$this->view->pager = '';
+		$this->view->fakeRole = '';
 
 		// init language support (if exists)
 		if(wire('modules')->isInstalled('LanguageSupportFields')) {
@@ -102,6 +103,17 @@ class ProcessSelectorTest extends Process {
 		$field->label = $this->_("Limit results");
 		$field->description = $this->_("Adds 'limit=<nn>' to the selector string. Leave empty or use '0' (zero) to go without any additional limit. NOTE: This will override any previous limit given in the selector.");
 		$field->value = wire('session')->get('selectortest_limit');
+		$field->columnWidth = 50;
+		$form->add($field);
+
+		// Dropdown for role selection
+		$field = $this->modules->get("InputfieldSelect");
+		$field->attr('id+name', 'selectortest_role');
+		$field->label = $this->_("Show page permissions for role");
+		$field->description = $this->_("Different page permissions are shown from the perspective of the chosen role for each listed page.");
+		foreach(wire('roles') as $role) $field->addOption($role->name);
+		$field->value = wire('session')->get('selectortest_role');
+		$field->columnWidth = 50;
 		$form->add($field);
 
 		// Submit button
@@ -109,9 +121,19 @@ class ProcessSelectorTest extends Process {
 		$field->type = 'submit';
 		$field->name = 'selectortest_submit';
 		$field->value = $this->_("Run test");
+		$field->columnWidth = 99;
 		$form->add($field);
 
 		$this->view->inputForm = $form->render();
+	}
+
+	/**
+	 * TODO: make these translatable!
+	 */
+	private function renderPermission($page, $permission) {
+		return '<span title="Page ' . ($page->$permission() ? 'is ':'is not ') . $permission . ' by a user with role ' . wire('session')->get('selectortest_role') . '">' .
+				($page->$permission() ? 'yes':'no') .
+				'</span>';
 	}
 
 	/**
@@ -128,7 +150,7 @@ class ProcessSelectorTest extends Process {
 		$this->renderInputForm();
 
 		// input is passed forward *intentionally* as-is
-		// --> validation errors are supposed to arise at this point (errors are cathced and displayed)
+		// --> validation errors are supposed to arise at this point (errors are catched and displayed)
 		try {
 			$selector = wire('session')->get('selectortest_selector');
 
@@ -159,16 +181,42 @@ class ProcessSelectorTest extends Process {
 
 				$table = $this->modules->get("MarkupAdminDataTable");
 				$table->setEncodeEntities(false);
-				$table->headerRow(array(
+				$hdr = array(
 					$this->_('Id'),
 					$this->_('Data')
-				));
+				);
+
+				// if a role has been given, set up a fake user with the chosen role and create some columns
+				$pagePermissions = array('publishable', 'viewable', 'listable', 'deleteable', 'addable', 'moveable', 'sortable');
+				$fakeRole = wire('session')->get('selectortest_role');
+				if($fakeRole) {
+					$this->view->fakeRole = $fakeRole;
+
+					$currentUser = wire('users')->getCurrentUser();
+					$fakeUser = new User();
+					$fakeUser->addRole($fakeRole);
+					wire('users')->setCurrentUser($fakeUser);
+
+					foreach($pagePermissions as $p) {
+						$hdr[] = $p[0];
+					}
+				}
+				$table->headerRow($hdr);
 				foreach($results as $row) {
 					$vals = array($row->id);
 					$vals[] = '<div class="selectortest-tree" data-id="' . $row->id . '"></div>';
+					if($fakeRole) {
+						foreach($pagePermissions as $p) {
+							$vals[] = $this->renderPermission($row, $p);
+						}
+					}
 					$table->row($vals);
 
 					$initialData[$row->id] = $this->getPage($row);
+				}
+				// restore original user right away
+				if($fakeRole) {
+					wire('users')->setCurrentUser($currentUser);
 				}
 				$this->view->resultTable = $table->render();
 				$this->view->initialData = json_encode($initialData);
@@ -182,6 +230,12 @@ class ProcessSelectorTest extends Process {
 		return $this->view->render();
 	}
 
+	/**
+	 * Save submitted values, or default values, to session.
+	 * This way values may be more complex than is suitable for get-variables
+	 * and paging works nicely.
+	 *
+	 */
 	private function saveFormValuesToSession() {
 		// preserve previous values even if they're empty,
 		// but use default values at the very first time
@@ -191,10 +245,14 @@ class ProcessSelectorTest extends Process {
 		$limit = wire('session')->get('selectortest_limit');
 		if(is_null($limit)) $limit = self::defaultLimit;
 
+		$role = wire('session')->get('selectortest_role');
+		if(is_null($role)) $role = '';
+
 		// and always use posted values (trimmed), if there is any
 		if($this->input->post->selectortest_submit) {
 			$selector = trim($this->input->post->selectortest_selector);
 			$limit = trim($this->input->post->selectortest_limit);
+			$role = trim($this->input->post->selectortest_role);
 		}
 
 		// some get variables (parent_id, template) will override selector
@@ -206,6 +264,7 @@ class ProcessSelectorTest extends Process {
 
 		wire('session')->set('selectortest_selector', $selector);
 		wire('session')->set('selectortest_limit', $limit);
+		wire('session')->set('selectortest_role', $role);
 	}
 
 	/**
@@ -283,7 +342,9 @@ class ProcessSelectorTest extends Process {
 	 */
 	private function getPageLabel($page) {
 		return array(
-			'label'   => $page->title ? $page->title : $page->name,
+			// force title value into string context to get the default language value of a multilang title
+			// use name as a fallback when title hasn't got anything to say
+			'label'   => "$page->title" ? "$page->title" : $page->name,
 			'status'  => $this->flagsToStringArray($page->status, $this->getPageStatusMap()),
 			'actions' => array(
 				$this->_('view') => $page->url,
@@ -315,8 +376,6 @@ class ProcessSelectorTest extends Process {
 
 	/**
 	 * Format all field values for display. Handles language-alternate and multi-language fields.
-	 *
-	 * TODO: wrap fields inside a fieldset to their own subtree
 	 *
 	 * @param Page $page Page object
 	 * @return array Array of displayable data
@@ -434,6 +493,11 @@ class ProcessSelectorTest extends Process {
 							array('key' => 'tags',        'value' => $file->tags),
 						)
 					);
+					// date properties only if core version in use supports them
+					if(defined('FieldtypeFile::fileSchemaDate')) {
+						$fileEntry['children'][] = array('key' => 'created',  'value' => $this->formatDate($file->created));
+						$fileEntry['children'][] = array('key' => 'modified', 'value' => $this->formatDate($file->modified));
+					}
 					// some more properties if it was an image
 					if($field->type == 'FieldtypeImage') {
 						// just for clarity...

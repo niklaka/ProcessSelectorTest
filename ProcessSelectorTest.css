@@ -10,6 +10,13 @@ table.AdminDataList tr td:first-child {
 	padding-right: 1em;
 }
 
+/* constant widths for columns from 3rd column (if there are more than two) */
+table.AdminDataList tr th:nth-child(n+3),
+table.AdminDataList tr td:nth-child(n+3) {
+	width: 2em;
+	text-align: center;
+}
+
 /* a bit deeper indentation from the default (14px) */
 div.selectortest-tree ul.jqtree-tree ul {
 	margin-left: 20px;
