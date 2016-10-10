@@ -142,6 +142,11 @@ class ProcessSelectorTest extends Process {
 	 */
 	public function ___execute() {
 
+		$info = array(
+			'selector' => '',
+			'results'  => false,
+		);
+
 		// save selector and limit to session
 		// (don't want to use GET parameters for selector string anyway)
 		$this->saveFormValuesToSession();
@@ -153,6 +158,7 @@ class ProcessSelectorTest extends Process {
 		// --> validation errors are supposed to arise at this point (errors are catched and displayed)
 		try {
 			$selector = wire('session')->get('selectortest_selector');
+			$info['selector'] = $selector;
 
 			// ..well, almost as-is: add limit if specified
 			// ..and with limit + pagination additional offset may be added while building the query (at core, that is)
@@ -175,6 +181,7 @@ class ProcessSelectorTest extends Process {
 			// generate the results table
 			$cnt = $results->getTotal();
 			$this->view->resultCount = $cnt;
+			$info['results'] = $cnt;
 			$initialData = array();
 			if($cnt) {
 				// pager, if needed
@@ -226,10 +233,29 @@ class ProcessSelectorTest extends Process {
 		} catch (WireException $e) {
 			// did not succeed, show error message to the user
 			$this->error($e->getMessage());
+			$info['results'] = $e->getMessage();
 		}
 
+		$this->logResults($info);
 		return $this->view->render();
 	}
+
+
+	/**
+	 * Adds the results to the log file...
+	 */
+	protected function logResults($info) {
+		//if (0 === $info['results']) return; // Don't log selectors that return nothing.
+		if (false === $info['results']) {
+			$res = 'SELECTOR ERROR';
+		} elseif (is_string($info['results'])) {
+			$res = 'Error: ' . $this->sanitizer->text($info['results']);
+		} else {
+			$res = $info['results'].' pages';
+		}
+		$this->log("'{$info['selector']}' ⇒ $res");
+	}
+
 
 	/**
 	 * Save submitted values, or default values, to session.
