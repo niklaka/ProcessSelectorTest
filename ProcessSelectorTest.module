@@ -591,7 +591,9 @@ class ProcessSelectorTest extends Process {
 					// (placeholders, visible here because of output formatting being intentionally off)
 					if($r->status & Page::statusUnpublished) continue;
 					// label as a string to get 0 displayed as well
-					$children[] = array('label' => (string)$n++, 'children' => $this->getPageFieldValues($r));
+					$replabel = $this->formatRepeaterLabel($field, $r, $n);
+					$children[] = array('label' => $replabel, 'children' => $this->getPageFieldValues($r));
+					$n++;
 				}
 				$item['value'] = count($children);
 				break;
@@ -599,6 +601,18 @@ class ProcessSelectorTest extends Process {
 		if(count($children)) $item['children'] = $children;
 
 		return $item;
+	}
+
+
+	/**
+	 * Hook to format the label of repeater fields.
+	 *
+	 * Add an after hook to this event if you want to do some custom formatting for some of your repeater fields.
+	 */
+	protected function ___formatRepeaterLabel($parent_field, $r, $n) {
+		$replabel = (string)$n;
+		if ($r->title) $replabel .= ' ' . $r->title;
+		return $replabel;
 	}
 
 	/**
