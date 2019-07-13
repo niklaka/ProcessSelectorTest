@@ -1,5 +1,14 @@
 <?php
 
+use ProcessWire\Field;
+use ProcessWire\Page;
+use ProcessWire\Process;
+use ProcessWire\Template;
+use ProcessWire\TemplateFile;
+use ProcessWire\User;
+use function ProcessWire\wire;
+use ProcessWire\WireException;
+
 /**
  * ProcessWire Selector Test
  *
