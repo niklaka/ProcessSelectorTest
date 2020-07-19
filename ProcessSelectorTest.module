@@ -1,5 +1,14 @@
 <?php
 
+use ProcessWire\Field;
+use ProcessWire\Page;
+use ProcessWire\Process;
+use ProcessWire\Template;
+use ProcessWire\TemplateFile;
+use ProcessWire\User;
+use function ProcessWire\wire;
+use ProcessWire\WireException;
+
 /**
  * ProcessWire Selector Test
  *
@@ -142,6 +151,11 @@ class ProcessSelectorTest extends Process {
 	 */
 	public function ___execute() {
 
+		$info = array(
+			'selector' => '',
+			'results'  => false,
+		);
+
 		// save selector and limit to session
 		// (don't want to use GET parameters for selector string anyway)
 		$this->saveFormValuesToSession();
@@ -153,6 +167,7 @@ class ProcessSelectorTest extends Process {
 		// --> validation errors are supposed to arise at this point (errors are catched and displayed)
 		try {
 			$selector = wire('session')->get('selectortest_selector');
+			$info['selector'] = $selector;
 
 			// ..well, almost as-is: add limit if specified
 			// ..and with limit + pagination additional offset may be added while building the query (at core, that is)
@@ -175,6 +190,7 @@ class ProcessSelectorTest extends Process {
 			// generate the results table
 			$cnt = $results->getTotal();
 			$this->view->resultCount = $cnt;
+			$info['results'] = $cnt;
 			$initialData = array();
 			if($cnt) {
 				// pager, if needed
@@ -226,10 +242,29 @@ class ProcessSelectorTest extends Process {
 		} catch (WireException $e) {
 			// did not succeed, show error message to the user
 			$this->error($e->getMessage());
+			$info['results'] = $e->getMessage();
 		}
 
+		$this->logResults($info);
 		return $this->view->render();
 	}
+
+
+	/**
+	 * Adds the results to the log file...
+	 */
+	protected function logResults($info) {
+		//if (0 === $info['results']) return; // Don't log selectors that return nothing.
+		if (false === $info['results']) {
+			$res = 'SELECTOR ERROR';
+		} elseif (is_string($info['results'])) {
+			$res = 'Error: ' . $this->sanitizer->text($info['results']);
+		} else {
+			$res = $info['results'].' pages';
+		}
+		$this->log("'{$info['selector']}' ⇒ $res");
+	}
+
 
 	/**
 	 * Save submitted values, or default values, to session.
@@ -565,7 +600,9 @@ class ProcessSelectorTest extends Process {
 					// (placeholders, visible here because of output formatting being intentionally off)
 					if($r->status & Page::statusUnpublished) continue;
 					// label as a string to get 0 displayed as well
-					$children[] = array('label' => (string)$n++, 'children' => $this->getPageFieldValues($r));
+					$replabel = $this->formatRepeaterLabel($field, $r, $n);
+					$children[] = array('label' => $replabel, 'children' => $this->getPageFieldValues($r));
+					$n++;
 				}
 				$item['value'] = count($children);
 				break;
@@ -573,6 +610,18 @@ class ProcessSelectorTest extends Process {
 		if(count($children)) $item['children'] = $children;
 
 		return $item;
+	}
+
+
+	/**
+	 * Hook to format the label of repeater fields.
+	 *
+	 * Add an after hook to this event if you want to do some custom formatting for some of your repeater fields.
+	 */
+	protected function ___formatRepeaterLabel($parent_field, $r, $n) {
+		$replabel = (string)$n;
+		if ($r->title) $replabel .= ' ' . $r->title;
+		return $replabel;
 	}
 
 	/**

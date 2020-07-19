@@ -1,3 +1,6 @@
+<?php
+use function ProcessWire\_n;
+?>
 <script>
 	$(function() {
 		SelectorTest = {};
